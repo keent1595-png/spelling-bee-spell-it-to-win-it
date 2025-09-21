@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spell-it-to-Win-it!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --baby-pink: #ffd6ec;
+      --baby-blue: #caf0f8;
+      --lavender: #bdb2ff;
+      --font-main: 'Special Elite', Courier, monospace;
+      --shadow: 0 2px 8px rgba(180,140,255,0.16);
+    }
+    html, body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--baby-pink), var(--baby-blue), var(--lavender));
+      font-family: var(--font-main);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 440px;
+      margin: 2rem auto;
+      background: white;
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 {
+      color: var(--lavender);
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+    }
+    h2 { margin-top: 0.4em; }
+    .instructions {
+      background: var(--baby-pink);
+      border-radius: 12px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    .button-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    button {
+      font-family: inherit;
+      background: var(--baby-blue);
+      color: #444;
+      border: none;
+      border-radius: 12px;
+      padding: 0.7rem 2rem;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: background 0.15s;
+    }
+    button:active, button:hover {
+      background: var(--lavender);
+    }
+    .difficulty-btn.selected {
+      background: var(--lavender);
+      font-weight: bold;
+    }
+    .letter-card, .blank-slot {
+      display: inline-block;
+      background: var(--baby-pink);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      margin: 0.2rem;
+      padding: 0.7rem 1.1rem;
+      font-size: 1.5rem;
+      font-family: var(--font-main);
+    }
+    .letter-card {
+      cursor: pointer;
+      transition: background 0.13s;
+    }
+    .letter-card:active {
+      background: var(--lavender);
+    }
+    .blank-slot {
+      min-width: 1.2em;
+      background: #fff4fa;
+    }
+    .roblox-avatar {
+      margin: 1rem auto 1rem auto;
+      font-size: 3rem;
+      will-change: transform;
+      transition: transform 0.2s;
+    }
+    .roblox-avatar.happy { animation: happy-bounce 0.5s; }
+    .roblox-avatar.sad   { animation: sad-shake 0.5s; }
+    .roblox-avatar.confused { animation: confused-tilt 0.5s; }
+    @keyframes happy-bounce { 0%{transform:translateY(0);} 50%{transform:translateY(-12px);} 100%{transform:translateY(0);} }
+    @keyframes sad-shake { 0%,100%{transform:rotate(0);} 20%,80%{transform:rotate(-8deg);} 40%,60%{transform:rotate(8deg);} }
+    @keyframes confused-tilt { 0%,100%{transform:rotate(0);} 50%{transform:rotate(25deg);} }
+    .confetti { pointer-events:none; position:fixed; left:0; top:0; width:100vw; height:100vh; z-index:999; }
+    #timer { font-size: 1.1em; }
+    #score { font-size: 1.1em; margin-bottom: 1em; }
+    @media (max-width: 520px) {
+      .container { padding: 0.8em; }
+      h1 {font-size: 1.3em;}
+      h2 {font-size:1.1em;}
+      .roblox-avatar { font-size: 2em; }
+      .letter-card, .blank-slot { font-size: 1.1em; padding: 0.5em 0.7em;}
+    }
+  </style>
+</head>
+<body>
+  <!-- Home -->
+  <div class="container" id="home-screen">
+    <h1>Spell-it-to-Win-it!</h1>
+    <div class="roblox-avatar" id="home-avatar">🙂</div>
+    <div class="instructions">
+      <h2>How to Play</h2>
+      <ul>
+        <li>Listen to the word</li>
+        <li>Arrange the letters to spell it</li>
+        <li>Beat the timer!</li>
+      </ul>
+      <div>
+        <strong>Choose Difficulty:</strong>
+        <div class="button-row" style="margin:0.5em 0 0 0;">
+          <button class="difficulty-btn" data-level="easy" onclick="setDifficulty('easy')">Easy</button>
+          <button class="difficulty-btn" data-level="medium" onclick="setDifficulty('medium')">Medium</button>
+          <button class="difficulty-btn" data-level="hard" onclick="setDifficulty('hard')">Hard</button>
+        </div>
+      </div>
+    </div>
+    <div class="button-row">
+      <button onclick="startGame()">Start</button>
+      <button onclick="window.close()">Exit</button>
+    </div>
+  </div>
+
+  <!-- Game -->
+  <div class="container" id="game-screen" style="display:none;">
+    <div class="roblox-avatar" id="game-avatar">🙂</div>
+    <div id="timer">Timer: 10</div>
+    <div id="score">Score: 0</div>
+    <div id="letters"></div>
+    <div id="answer"></div>
+    <div class="button-row" style="margin-top:1.3em;">
+      <button id="hint-btn" onclick="useHint()">Hint (3 left)</button>
+      <button onclick="speakWord()">🔊 Hear word</button>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="container" id="gameover-screen" style="display:none;">
+    <h1>🎉 Confetti! 🎉</h1>
+    <div class="roblox-avatar" id="over-avatar">😃</div>
+    <p id="final-score"></p>
+    <div class="button-row">
+      <button onclick="startGame()">Play Again</button>
+      <button onclick="goHome()">Home</button>
+    </div>
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confettiCanvas" class="confetti" style="display:none;"></canvas>
+  <audio id="ding" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa1e5b.mp3"></audio>
+  <audio id="buzz" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b4a4b0e.mp3"></audio>
+  <audio id="celebrate" src="https://cdn.pixabay.com/audio/2022/02/23/audio_115b7cfae2.mp3"></audio>
+  <audio id="chime" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa1e5b.mp3"></audio>
+
+  <script>
+    // Word banks by difficulty
+    const wordBanks = {
+      easy:   ["cat","dog","egg","bag","bat","map","log","sun","car","box"],
+      medium: ["baker","magic","table","apple","music","train","robot","plant","cloud"],
+      hard:   ["baggage","bicycle","biscuit","athlete","atmosphere","bacteria","attendance","authority","association","benefited","benefiting","assistance"]
+    };
+    // Emoji avatars for moods
+    const avatarMoods = { idle:"🙂", happy:"😃", sad:"😢", confused:"😕" };
+    // Game state
+    let difficulty = "easy";
+    let wordList = [];
+    let currentWord = "";
+    let shuffled = [];
+    let answer = [];
+    let score = 0;
+    let round = 0;
+    let totalRounds = 10;
+    let timer = 10;
+    let timerInterval = null;
+    let hints = 3;
+
+    //--- Utility functions ---
+    function shuffleWord(word) {
+      let arr = word.split("");
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      // Don't allow the word to be unshuffled
+      if (arr.join('') === word) return shuffleWord(word);
+      return arr;
+    }
+
+    function setDifficulty(level) {
+      difficulty = level;
+      document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.level === level);
+      });
+    }
+
+    function goHome() {
+      stopTimer();
+      document.getElementById("home-screen").style.display = "";
+      document.getElementById("game-screen").style.display = "none";
+      document.getElementById("gameover-screen").style.display = "none";
+      document.getElementById("home-avatar").textContent = avatarMoods.idle;
+    }
+
+    function startGame() {
+      setDifficulty(difficulty); // Ensure button is highlighted
+      wordList = [...wordBanks[difficulty]];
+      while (wordList.length < totalRounds) { wordList = wordList.concat(wordBanks[difficulty]); }
+      wordList = wordList.sort(()=>Math.random()-0.5).slice(0,totalRounds);
+      score = 0; round = 0; hints = 3;
+      document.getElementById("home-screen").style.display = "none";
+      document.getElementById("game-screen").style.display = "";
+      document.getElementById("gameover-screen").style.display = "none";
+      nextRound();
+    }
+
+    function nextRound() {
+      if (round >= totalRounds) return endGame();
+      currentWord = wordList[round];
+      shuffled = shuffleWord(currentWord);
+      answer = [];
+      timer = 10;
+      document.getElementById("score").textContent = `Score: ${score}`;
+      document.getElementById("hint-btn").textContent = `Hint (${hints} left)`;
+      document.getElementById("game-avatar").textContent = avatarMoods.idle;
+      document.getElementById("game-avatar").className = "roblox-avatar";
+      drawLetters();
+      drawAnswer();
+      startTimer();
+      speakWord();
+      round++;
+    }
+
+    function drawLetters() {
+      const container = document.getElementById("letters");
+      container.innerHTML = "";
+      shuffled.forEach((ch, idx) => {
+        const span = document.createElement("span");
+        span.className = "letter-card";
+        span.textContent = ch;
+        span.onclick = () => pickLetter(idx);
+        span.setAttribute('tabindex',0);
+        span.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') pickLetter(idx); };
+        container.appendChild(span);
+      });
+    }
+
+    function drawAnswer() {
+      const container = document.getElementById("answer");
+      container.innerHTML = "";
+      for (let i = 0; i < currentWord.length; i++) {
+        const span = document.createElement("span");
+        span.className = "blank-slot";
+        span.textContent = answer[i] || "_";
+        container.appendChild(span);
+      }
+    }
+
+    function pickLetter(idx) {
+      answer.push(shuffled[idx]);
+      shuffled.splice(idx, 1);
+      drawLetters();
+      drawAnswer();
+      if (answer.length === currentWord.length) checkAnswer();
+    }
+
+    function checkAnswer() {
+      stopTimer();
+      if (answer.join("") === currentWord) {
+        score++;
+        playSound('ding');
+        setAvatarMood("happy");
+        setTimeout(nextRound, 900);
+      } else {
+        playSound('buzz');
+        setAvatarMood("confused");
+        setTimeout(()=>{
+          // Show correct answer
+          for(let i=0; i<currentWord.length; i++) answer[i]=currentWord[i];
+          drawAnswer();
+          setTimeout(nextRound, 900);
+        },700);
+      }
+    }
+
+    function startTimer() {
+      document.getElementById("timer").textContent = "Timer: " + timer;
+      stopTimer();
+      timerInterval = setInterval(() => {
+        timer--;
+        document.getElementById("timer").textContent = "Timer: " + timer;
+        if (timer === 0) {
+          stopTimer();
+          setAvatarMood("sad");
+          playSound('buzz');
+          setTimeout(()=>{
+            for(let i=0; i<currentWord.length; i++) answer[i]=currentWord[i];
+            drawAnswer();
+            setTimeout(nextRound, 900);
+          },700);
+        }
+      }, 1000);
+    }
+    function stopTimer() { if (timerInterval) clearInterval(timerInterval); }
+
+    function endGame() {
+      stopTimer();
+      document.getElementById("game-screen").style.display = "none";
+      document.getElementById("gameover-screen").style.display = "";
+      document.getElementById("final-score").textContent = `You scored: ${score}/${totalRounds}!`;
+      document.getElementById("over-avatar").textContent = avatarMoods.happy;
+      playSound('celebrate');
+      runConfetti();
+    }
+
+    function useHint() {
+      if (hints > 0 && answer.length < currentWord.length) {
+        answer.push(currentWord[answer.length]);
+        // Remove first occurrence of that letter from shuffled
+        const idx = shuffled.indexOf(currentWord[answer.length-1]);
+        if (idx !== -1) shuffled.splice(idx, 1);
+        hints--;
+        document.getElementById("hint-btn").textContent = `Hint (${hints} left)`;
+        drawLetters();
+        drawAnswer();
+        if (answer.length === currentWord.length) checkAnswer();
+      }
+    }
+
+    function setAvatarMood(mood) {
+      const avatar = document.getElementById("game-avatar");
+      avatar.textContent = avatarMoods[mood] || avatarMoods.idle;
+      avatar.className = "roblox-avatar " + mood;
+      setTimeout(() => avatar.className = "roblox-avatar", 600);
+    }
+
+    function playSound(id) {
+      const el = document.getElementById(id);
+      if (el) { el.currentTime=0; el.play(); }
+    }
+
+    function speakWord() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(currentWord);
+        utter.rate = 0.82;
+        utter.pitch = 1.05;
+        utter.lang = 'en-US';
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    // Confetti animation (simple, not using external libraries)
+    function runConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.style.display = '';
+      const ctx = canvas.getContext('2d');
+      let confs = Array.from({length:60},()=>({
+        x:Math.random()*canvas.width,
+        y:Math.random()*-canvas.height,
+        r:Math.random()*8+4,
+        c:`hsl(${Math.random()*360},70%,85%)`,
+        d:Math.random()*4+2
+      }));
+      let frame = 0;
+      function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        confs.forEach(f=>{
+          ctx.beginPath();
+          ctx.arc(f.x,f.y,f.r,0,2*Math.PI);
+          ctx.fillStyle = f.c;
+          ctx.fill();
+          f.y += f.d;
+          f.x += Math.sin(frame/10+f.r)*2;
+          if (f.y > canvas.height) f.y = -10;
+        });
+        frame++;
+        if (frame < 70) requestAnimationFrame(draw);
+        else setTimeout(()=>canvas.style.display='none',550);
+      }
+      draw();
+    }
+
+    // Accessibility: allow Enter/Space to activate focused letter
+    document.body.addEventListener('keydown', function(e){
+      if(document.activeElement.classList.contains('letter-card') && (e.key==='Enter'||e.key===' ')){
+        document.activeElement.click();
+        e.preventDefault();
+      }
+    });
+
+    // Start at home
+    goHome();
+    setDifficulty("easy");
+  </script>
+</body>
+</html>
